@@ -1,2 +1,5 @@
-./libExamples
+./libExamples/*
+libExamples/
+./libExamples/*/*
+*libExamples*
 
