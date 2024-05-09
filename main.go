@@ -66,8 +66,8 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case tea.WindowSizeMsg:
 		m.height = msg.Height
 		m.width = msg.Width
-		msg.Height -= 30
-		msg.Width -= 30
+		msg.Height -= 100
+		msg.Width -= 100
 		return m.propagate(msg), nil
 	}
 
@@ -107,8 +107,8 @@ func main() {
 	m := &model{
 		dialog: &dialog{
 			id:       zone.NewPrefix(),
-			height:   50,
-            width:    50,
+			height:   100,
+            width:    100,
 			active:   "playpauseButton",
 		},
 
