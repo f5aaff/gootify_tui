@@ -13,6 +13,10 @@ import (
 	zone "github.com/lrstanley/bubblezone"
 )
 
+const (
+	baseURL = "http://localhost:3000/"
+)
+
 // This is a modified version of this example, supporting full screen, dynamic
 // resizing, and clickable models (tabs, lists, dialogs, etc).
 // 	https://github.com/charmbracelet/lipgloss/blob/master/example
@@ -33,8 +37,7 @@ type model struct {
 	height int
 	width  int
 
-	dialog  tea.Model
-
+	dialog tea.Model
 }
 
 func (m model) Init() tea.Cmd {
@@ -77,7 +80,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 func (m *model) propagate(msg tea.Msg) tea.Model {
 	// Propagate to all children.
 	m.dialog, _ = m.dialog.Update(msg)
-return m
+	return m
 }
 
 func (m model) View() string {
@@ -92,7 +95,7 @@ func (m model) View() string {
 			m.width, lipgloss.Center,
 			lipgloss.JoinHorizontal(
 				lipgloss.Top,
-                m.dialog.View(),
+				m.dialog.View(),
 			),
 			lipgloss.WithWhitespaceChars(" "),
 		),
@@ -106,12 +109,11 @@ func main() {
 
 	m := &model{
 		dialog: &dialog{
-			id:       zone.NewPrefix(),
-			height:   100,
-            width:    100,
-			active:   "playpauseButton",
+			id:     zone.NewPrefix(),
+			height: 100,
+			width:  100,
+			active: "playpauseButton",
 		},
-
 	}
 
 	p := tea.NewProgram(m, tea.WithAltScreen(), tea.WithMouseCellMotion())
