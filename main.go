@@ -1,12 +1,9 @@
-// Copyright (c) Liam Stanley <me@liamstanley.io>. All rights reserved. Use
-// of this source code is governed by the MIT license that can be found in
-// the LICENSE file.
-
 package main
 
 import (
 	"fmt"
 	"os"
+	"strings"
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
@@ -16,10 +13,6 @@ import (
 const (
 	baseURL = "http://localhost:3000/"
 )
-
-// This is a modified version of this example, supporting full screen, dynamic
-// resizing, and clickable models (tabs, lists, dialogs, etc).
-// 	https://github.com/charmbracelet/lipgloss/blob/master/example
 
 var (
 	subtle    = lipgloss.AdaptiveColor{Light: "#D9DCCF", Dark: "#383838"}
@@ -33,93 +26,114 @@ var (
 		String()
 )
 
+// TODO : figure out a structure to have generic submodels, then have tabcontent be a slice of those submodels
+// then find a way to render these sub models when they are the active tab.
 type model struct {
-	height int
-	width  int
-
-	dialog tea.Model
+	Tabs       []string
+	TabContent []string
+	//TabContent []func(msg tea.Msg)
+	activeTab int
 }
 
 func (m model) Init() tea.Cmd {
 	return nil
 }
 
-func (m model) isInitialized() bool {
-	return m.height != 0 && m.width != 0
-}
-
 func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
-	if !m.isInitialized() {
-		if _, ok := msg.(tea.WindowSizeMsg); !ok {
-			return m, nil
-		}
-	}
-
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
-		// Example of toggling mouse event tracking on/off.
-		if msg.String() == "ctrl+e" {
-			zone.SetEnabled(!zone.Enabled())
+		switch keypress := msg.String(); keypress {
+		case "ctrl+c", "q":
+			return m, tea.Quit
+		case "right", "l", "n", "tab":
+			m.activeTab = min(m.activeTab+1, len(m.Tabs)-1)
+			return m, nil
+		case "left", "h", "p", "shift+tab":
+			m.activeTab = max(m.activeTab-1, 0)
 			return m, nil
 		}
-
-		if msg.String() == "ctrl+c" {
-			return m, tea.Quit
-		}
-	case tea.WindowSizeMsg:
-		m.height = msg.Height
-		m.width = msg.Width
-		msg.Height -= 100
-		msg.Width -= 100
-		return m.propagate(msg), nil
 	}
 
-	return m.propagate(msg), nil
+	return m, nil
 }
 
-func (m *model) propagate(msg tea.Msg) tea.Model {
-	// Propagate to all children.
-	m.dialog, _ = m.dialog.Update(msg)
-	return m
+func tabBorderWithBottom(left, middle, right string) lipgloss.Border {
+	border := lipgloss.RoundedBorder()
+	border.BottomLeft = left
+	border.Bottom = middle
+	border.BottomRight = right
+	return border
 }
+
+var (
+	inactiveTabBorder = tabBorderWithBottom("┴", "─", "┴")
+	activeTabBorder   = tabBorderWithBottom("┘", " ", "└")
+	docStyle          = lipgloss.NewStyle().Padding(1, 2, 1, 2)
+	highlightColor    = lipgloss.AdaptiveColor{Light: "#874BFD", Dark: "#7D56F4"}
+	inactiveTabStyle  = lipgloss.NewStyle().Border(inactiveTabBorder, true).BorderForeground(highlightColor).Padding(0, 1)
+	activeTabStyle    = inactiveTabStyle.Border(activeTabBorder, true)
+	windowStyle       = lipgloss.NewStyle().BorderForeground(highlightColor).Padding(2, 0).Align(lipgloss.Center).Border(lipgloss.NormalBorder()).UnsetBorderTop()
+)
 
 func (m model) View() string {
-	if !m.isInitialized() {
-		return ""
+	doc := strings.Builder{}
+
+	var renderedTabs []string
+
+	for i, t := range m.Tabs {
+		var style lipgloss.Style
+		isFirst, isLast, isActive := i == 0, i == len(m.Tabs)-1, i == m.activeTab
+		if isActive {
+			style = activeTabStyle
+		} else {
+			style = inactiveTabStyle
+		}
+		border, _, _, _, _ := style.GetBorder()
+		if isFirst && isActive {
+			border.BottomLeft = "│"
+		} else if isFirst && !isActive {
+			border.BottomLeft = "├"
+		} else if isLast && isActive {
+			border.BottomRight = "│"
+		} else if isLast && !isActive {
+			border.BottomRight = "┤"
+		}
+		style = style.Border(border)
+		renderedTabs = append(renderedTabs, style.Render(t))
 	}
 
-	s := lipgloss.NewStyle().MaxHeight(m.height).MaxWidth(m.width).Padding(1, 2, 1, 2)
-
-	return zone.Scan(s.Render(lipgloss.JoinVertical(lipgloss.Top,
-		lipgloss.PlaceHorizontal(
-			m.width, lipgloss.Center,
-			lipgloss.JoinHorizontal(
-				lipgloss.Top,
-				m.dialog.View(),
-			),
-			lipgloss.WithWhitespaceChars(" "),
-		),
-	)))
+	row := lipgloss.JoinHorizontal(lipgloss.Top, renderedTabs...)
+	doc.WriteString(row)
+	doc.WriteString("\n")
+	doc.WriteString(windowStyle.Width((lipgloss.Width(row) + windowStyle.GetHorizontalFrameSize())).Render(m.TabContent[m.activeTab]))
+	return docStyle.Render(doc.String())
 }
 
 func main() {
-	// Initialize a global zone manager, so we don't have to pass around the manager
-	// throughout components.
 	zone.NewGlobal()
+	tabs := []string{"Dialog", "History", "List"}
+	d := dialog{}
+	h := history{items: []string{"one", "two", "three"}}
+	l := list{}
 
-	m := &model{
-		dialog: &dialog{
-			id:     zone.NewPrefix(),
-			height: 100,
-			width:  100,
-			active: "playpauseButton",
-		},
-	}
-
-	p := tea.NewProgram(m, tea.WithAltScreen(), tea.WithMouseCellMotion())
-
-	if err := p.Start(); err != nil {
+	tabContent := []string{d.View(), h.View(), l.View()}
+	m := model{Tabs: tabs, TabContent: tabContent}
+	if _, err := tea.NewProgram(m).Run(); err != nil {
 		fmt.Println("Error running program:", err)
 		os.Exit(1)
 	}
+}
+
+func max(a, b int) int {
+	if a > b {
+		return a
+	}
+	return b
+}
+
+func min(a, b int) int {
+	if a < b {
+		return a
+	}
+	return b
 }

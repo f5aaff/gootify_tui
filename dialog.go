@@ -1,35 +1,18 @@
+// Copyright (c) Liam Stanley <me@liamstanley.io>. All rights reserved. Use
+// of this source code is governed by the MIT license that can be found in
+// the LICENSE file.
+
 package main
 
 import (
 	"encoding/json"
 	"example/models"
 	"fmt"
-	"io"
-	"net/http"
-
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 	zone "github.com/lrstanley/bubblezone"
-)
-
-var (
-	dialogBoxStyle = lipgloss.NewStyle().
-			Border(lipgloss.RoundedBorder(), true).
-			BorderForeground(lipgloss.Color("#874BFD")).
-			Padding(1, 0)
-
-	buttonStyle = lipgloss.NewStyle().
-			Foreground(lipgloss.Color("#FFF7DB")).
-			Background(lipgloss.Color("#888B7E")).
-			Padding(0, 3).
-			MarginTop(1).
-			MarginRight(2)
-
-	activeButtonStyle = buttonStyle.Copy().
-				Foreground(lipgloss.Color("#FFF7DB")).
-				Background(lipgloss.Color("#F25D94")).
-				MarginRight(2).
-				Underline(true)
+	"io"
+	"net/http"
 )
 
 func getCurrentlyPlaying() string {
@@ -60,6 +43,26 @@ func getTitleAndArtist(res *http.Response) string {
 	}
 	return "not a song"
 }
+
+var (
+	dialogBoxStyle = lipgloss.NewStyle().
+			Border(lipgloss.RoundedBorder(), true).
+			BorderForeground(lipgloss.Color("#874BFD")).
+			Padding(1, 0)
+
+	buttonStyle = lipgloss.NewStyle().
+			Foreground(lipgloss.Color("#FFF7DB")).
+			Background(lipgloss.Color("#888B7E")).
+			Padding(0, 3).
+			MarginTop(1).
+			MarginRight(2)
+
+	activeButtonStyle = buttonStyle.Copy().
+				Foreground(lipgloss.Color("#FFF7DB")).
+				Background(lipgloss.Color("#F25D94")).
+				MarginRight(2).
+				Underline(true)
+)
 
 type dialog struct {
 	id     string
@@ -121,6 +124,7 @@ func (m dialog) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m, nil
 	}
 	return m, nil
+
 }
 
 func (m dialog) View() string {
