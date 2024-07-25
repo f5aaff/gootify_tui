@@ -10,7 +10,6 @@ import (
 	"fmt"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
-	zone "github.com/lrstanley/bubblezone"
 	"io"
 	"net/http"
 )
@@ -46,9 +45,14 @@ func getTitleAndArtist(res *http.Response) string {
 
 var (
 	dialogBoxStyle = lipgloss.NewStyle().
-			Border(lipgloss.RoundedBorder(), true).
-			BorderForeground(lipgloss.Color("#874BFD")).
-			Padding(1, 0)
+			BorderForeground(highlightColor).
+			Padding(2, 0).
+			Align(lipgloss.Center).
+			Border(lipgloss.NormalBorder()).UnsetBorderTop()
+	//dialogBoxStyle = lipgloss.NewStyle().
+	//		Border(lipgloss.RoundedBorder(), true).
+	//		BorderForeground(lipgloss.Color("#874BFD")).
+	//		Padding(1, 0)
 
 	buttonStyle = lipgloss.NewStyle().
 			Foreground(lipgloss.Color("#FFF7DB")).
@@ -79,113 +83,24 @@ func (m dialog) Init() tea.Cmd {
 
 func (m dialog) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
-	case tea.WindowSizeMsg:
-		m.width = msg.Width
-	case tea.MouseMsg:
-		if msg.Type != tea.MouseLeft {
-			return m, nil
-		}
-		if zone.Get(m.id + "⏵").InBounds(msg) {
-			_, err := http.Get(baseURL + "devices/player/play")
-			if err != nil {
-				fmt.Println(err)
-			}
-			m.active = "⏸"
-		} else if zone.Get(m.id + "⏸").InBounds(msg) {
-			_, err := http.Get(baseURL + "devices/player/pause")
-			if err != nil {
-				fmt.Println(err)
-			}
-			m.active = "⏸"
-		} else if zone.Get(m.id + "⏮").InBounds(msg) {
-			_, err := http.Get(baseURL + "devices/player/previous")
-			if err != nil {
-				fmt.Println(err)
-			}
-			m.active = "⏮"
-		} else if zone.Get(m.id + "⏭").InBounds(msg) {
-			_, err := http.Get(baseURL + "devices/player/next")
-			if err != nil {
-				fmt.Println(err)
-			}
-			m.active = "⏭"
-		} else if zone.Get(m.id + "+").InBounds(msg) {
-			_, err := http.Get(baseURL + "devices/volup")
-			if err != nil {
-				fmt.Println(err)
-			}
-		} else if zone.Get(m.id + "-").InBounds(msg) {
-			_, err := http.Get(baseURL + "devices/voldown")
-			if err != nil {
-				fmt.Println(err)
-			}
-		}
-
-		return m, nil
+        case tea.KeyMsg:
+            switch keypress := msg.String(); keypress {
+            case "ctrl+c","q":
+                return m, tea.Quit
+            }
 	}
 	return m, nil
 
 }
 
 func (m dialog) View() string {
-	var playButton, playpauseButton, backButton, forwardButton, volUpButton, volDownButton string
-	if m.active == "playButton" {
-		backButton = buttonStyle.Render("⏮")
-		playButton = activeButtonStyle.Render("⏵")
-		playpauseButton = activeButtonStyle.Render("⏸")
-		forwardButton = buttonStyle.Render("⏭")
-		volUpButton = buttonStyle.Render("+")
-		volDownButton = buttonStyle.Render("-")
-	}
-	if m.active == "playpauseButton" {
-		backButton = buttonStyle.Render("⏮")
-		playButton = buttonStyle.Render("⏵")
-		playpauseButton = activeButtonStyle.Render("⏸")
-		forwardButton = buttonStyle.Render("⏭")
-		volUpButton = buttonStyle.Render("+")
-		volDownButton = buttonStyle.Render("-")
-	}
-	if m.active == "backButton" {
-		backButton = activeButtonStyle.Render("⏮")
-		playButton = buttonStyle.Render("⏵")
-		playpauseButton = buttonStyle.Render("⏸")
-		forwardButton = buttonStyle.Render("⏭")
-		volUpButton = buttonStyle.Render("+")
-		volDownButton = buttonStyle.Render("-")
-	}
 
-	if m.active == "forwardButton" {
-		backButton = buttonStyle.Render("⏮")
-		playButton = buttonStyle.Render("⏵")
-		playpauseButton = buttonStyle.Render("⏸")
-		forwardButton = activeButtonStyle.Render("⏭")
-		volUpButton = buttonStyle.Render("+")
-		volDownButton = buttonStyle.Render("-")
-	} else {
-		backButton = buttonStyle.Render("⏮")
-		playButton = buttonStyle.Render("⏵")
-		playpauseButton = buttonStyle.Render("⏸")
-		forwardButton = buttonStyle.Render("⏭")
-		volUpButton = buttonStyle.Render("+")
-		volDownButton = buttonStyle.Render("-")
-	}
+	question := lipgloss.NewStyle().Width(30).Align(lipgloss.Center).Render("gootify")
 
-	question := lipgloss.NewStyle().Width(27).Align(lipgloss.Center).Render("gootify")
-	buttons := lipgloss.JoinHorizontal(
-		lipgloss.Top,
-		zone.Mark(m.id+"⏮", backButton),
-		zone.Mark(m.id+"⏵", playButton),
-		zone.Mark(m.id+"⏸", playpauseButton),
-		zone.Mark(m.id+"⏭", forwardButton),
-	)
-
-	volLabel := lipgloss.NewStyle().Width(27).Align(lipgloss.Center).Render("volume")
+	volLabel := lipgloss.NewStyle().Width(30).Align(lipgloss.Center).Render("volume")
 	volumeControls := lipgloss.JoinHorizontal(lipgloss.Bottom,
-		volLabel,
-		zone.Mark(m.id+"+", volUpButton),
-		zone.Mark(m.id+"-", volDownButton),
-	)
+		volLabel)
 
-	currentTrack := lipgloss.NewStyle().Width(27).Align(lipgloss.Center).Render(getCurrentlyPlaying())
-	return dialogBoxStyle.Render(lipgloss.JoinVertical(lipgloss.Center, question, buttons, currentTrack, volumeControls))
+	currentTrack := lipgloss.NewStyle().Width(30).Align(lipgloss.Center).Render(getCurrentlyPlaying())
+	return dialogBoxStyle.Render(lipgloss.JoinVertical(lipgloss.Center, question, currentTrack, volumeControls))
 }
