@@ -75,10 +75,10 @@ func (m mainModel) View() string {
 		renderedTabs = append(renderedTabs, style.Render(t))
 	}
 
-	row := lipgloss.JoinHorizontal(lipgloss.Top, renderedTabs...)
-	doc.WriteString(row)
-	doc.WriteString("\n")
-    tab := m.TabContent[m.activeTab]
+//	row := lipgloss.JoinHorizontal(lipgloss.Top, renderedTabs...)
+//	doc.WriteString(row)
+//	doc.WriteString("\n")
+	tab := m.TabContent[m.activeTab]
 	doc.WriteString(windowStyle.Width((lipgloss.Width(tab.View()) + windowStyle.GetHorizontalFrameSize())).Render(m.TabContent[m.activeTab].View()))
 	return docStyle.Render(doc.String())
 }

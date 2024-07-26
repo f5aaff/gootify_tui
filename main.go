@@ -15,7 +15,6 @@ const (
 var (
 	subtle    = lipgloss.AdaptiveColor{Light: "#D9DCCF", Dark: "#383838"}
 	highlight = lipgloss.AdaptiveColor{Light: "#874BFD", Dark: "#7D56F4"}
-	special   = lipgloss.AdaptiveColor{Light: "#43BF6D", Dark: "#73F59F"}
 )
 
 // TODO : figure out a structure to have generic submodels, then have tabcontent be a slice of those submodels
@@ -42,9 +41,10 @@ var (
 func main() {
 	zone.NewGlobal()
 	tabs := []string{"Dialog", "History"}
-	d := dialog{}
+    d := dialog{width:20, height: 20}
 	h := history{items: []string{"one", "two", "three"}}
-
+	h.width = d.width
+    h.height = d.height
 	tabContent := []subModel{d, h}
 	m := mainModel{Tabs: tabs, TabContent: tabContent}
 	if _, err := tea.NewProgram(m).Run(); err != nil {

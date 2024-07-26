@@ -1,6 +1,6 @@
 package models
 
-type deviceResponse struct {
+type DeviceResponse struct {
 	Device struct {
 		ID               string `json:"id"`
 		IsActive         bool   `json:"is_active"`

@@ -1,17 +1,17 @@
-// Copyright (c) Liam Stanley <me@liamstanley.io>. All rights reserved. Use
-// of this source code is governed by the MIT license that can be found in
-// the LICENSE file.
-
 package main
 
 import (
 	"encoding/json"
 	"example/models"
 	"fmt"
-	tea "github.com/charmbracelet/bubbletea"
-	"github.com/charmbracelet/lipgloss"
 	"io"
 	"net/http"
+	"strconv"
+	"strings"
+
+	tea "github.com/charmbracelet/bubbletea"
+	"github.com/charmbracelet/lipgloss"
+	"github.com/rs/zerolog/log"
 )
 
 func getCurrentlyPlaying() string {
@@ -21,6 +21,42 @@ func getCurrentlyPlaying() string {
 	}
 
 	return getTitleAndArtist(res)
+}
+func getVolume() string {
+    res,err := http.Get(baseURL + "devices/")
+    if err != nil{
+        return err.Error()
+    }
+
+    byteres,err := io.ReadAll(res.Body)
+    if err !=nil{
+        return err.Error()
+    }
+
+    var device models.DeviceResponse
+    err = json.Unmarshal(byteres, &device)
+    if err != nil {
+        return err.Error()
+    }
+    return fmt.Sprint(device.Device.VolumePercent)
+}
+func renderVolume() string {
+    volstr := getVolume()
+    vol,err := strconv.Atoi(volstr)
+    if err != nil {
+        return err.Error()
+    }
+    currentBlock := vol/10
+    emptyblocks := 10 - vol
+    var s strings.Builder
+    for range currentBlock{
+        s.WriteString("█")
+    }
+    for range emptyblocks{
+        s.WriteString("-")
+    }
+    volout := "vol:"+s.String()+" "+fmt.Sprint(vol)+"%"
+    return volout
 }
 
 func getTitleAndArtist(res *http.Response) string {
@@ -45,27 +81,14 @@ func getTitleAndArtist(res *http.Response) string {
 
 var (
 	dialogBoxStyle = lipgloss.NewStyle().
-			BorderForeground(highlightColor).
-			Padding(2, 0).
-			Align(lipgloss.Center).
-			Border(lipgloss.NormalBorder()).UnsetBorderTop()
+		BorderForeground(highlightColor).
+		Padding(2, 0).
+		Align(lipgloss.Center).
+		Border(lipgloss.NormalBorder()).UnsetBorderTop()
 	//dialogBoxStyle = lipgloss.NewStyle().
 	//		Border(lipgloss.RoundedBorder(), true).
 	//		BorderForeground(lipgloss.Color("#874BFD")).
 	//		Padding(1, 0)
-
-	buttonStyle = lipgloss.NewStyle().
-			Foreground(lipgloss.Color("#FFF7DB")).
-			Background(lipgloss.Color("#888B7E")).
-			Padding(0, 3).
-			MarginTop(1).
-			MarginRight(2)
-
-	activeButtonStyle = buttonStyle.Copy().
-				Foreground(lipgloss.Color("#FFF7DB")).
-				Background(lipgloss.Color("#F25D94")).
-				MarginRight(2).
-				Underline(true)
 )
 
 type dialog struct {
@@ -77,17 +100,41 @@ type dialog struct {
 	question string
 }
 
+func playerFunc(action string) bool {
+	res, err := http.Get(baseURL + "devices/player/" + action)
+	if err != nil {
+		getCurrentlyPlaying()
+		log.Error().Msg("oops")
+	}
+	if res.StatusCode == 200 {
+		return true
+	} else {
+		return false
+	}
+}
+
 func (m dialog) Init() tea.Cmd {
 	return nil
 }
 
 func (m dialog) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
-        case tea.KeyMsg:
-            switch keypress := msg.String(); keypress {
-            case "ctrl+c","q":
-                return m, tea.Quit
-            }
+	case tea.WindowSizeMsg:
+		m.height = msg.Height
+		m.width = msg.Width
+	case tea.KeyMsg:
+		switch keypress := msg.String(); keypress {
+		case "ctrl+c", "q":
+			return m, tea.Quit
+		case "n", "d":
+			playerFunc("next")
+		case "l", "a":
+			playerFunc("previous")
+		case "s":
+			playerFunc("pause")
+        case "S":
+            playerFunc("play")
+		}
 	}
 	return m, nil
 
@@ -95,12 +142,12 @@ func (m dialog) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 func (m dialog) View() string {
 
-	question := lipgloss.NewStyle().Width(30).Align(lipgloss.Center).Render("gootify")
+	question := lipgloss.NewStyle().Width(m.width).Align(lipgloss.Center).Render("gootify")
 
-	volLabel := lipgloss.NewStyle().Width(30).Align(lipgloss.Center).Render("volume")
+	volLabel := lipgloss.NewStyle().Width(m.width).Align(lipgloss.Center).Render(renderVolume())
 	volumeControls := lipgloss.JoinHorizontal(lipgloss.Bottom,
 		volLabel)
-
-	currentTrack := lipgloss.NewStyle().Width(30).Align(lipgloss.Center).Render(getCurrentlyPlaying())
+	lipgloss.JoinHorizontal(lipgloss.Center, "\n")
+	currentTrack := lipgloss.NewStyle().Width(m.width).Align(lipgloss.Center).Render(getCurrentlyPlaying())
 	return dialogBoxStyle.Render(lipgloss.JoinVertical(lipgloss.Center, question, currentTrack, volumeControls))
 }
