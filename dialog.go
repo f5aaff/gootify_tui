@@ -17,79 +17,73 @@ import (
 type Current struct {
 	track    string
 	progress string
-	vol      int
+	vol      string
+	albumURL string
+	album    string
 }
 
-var current = Current{track: "", progress: "", vol: 0}
-var playing = Current{track: "", progress: "", vol: 0}
+var current = Current{track: "", progress: "", vol: "", albumURL: "", album: ""}
 
-func saveCover(url string, id string, playing Current) chan string {
-	if playing.track != current.track {
-		//TODO: make the retrieval a background process, and add a check to see if
-		// the cover is already downloaded.
-		r := make(chan string)
-		// Execute the first command: wget
-		go func() {
-			path := fmt.Sprintf("albumArt/%s.jpg", id)
-			wgetCmd := exec.Command("wget", url, "-O", path)
-			if err := wgetCmd.Run(); err != nil {
-				r <- "" //, fmt.Errorf("error executing wget command: %v", err)
-			}
-
-			// Execute the second command: viu
-			viuCmd := exec.Command("viu", "-w", "30", "-h", "10", path)
-			viuOutput, err := viuCmd.Output()
-			if err != nil {
-				r <- "" // fmt.Errorf("error executing viu command: %v,%s", err,url)
-			}
-
-			r <- string(viuOutput)
-		}()
-		return r
+func saveCover(url string, id string) error {
+	// Execute the first command: wget
+	path := fmt.Sprintf("albumArt/%s.jpg", id)
+	wgetCmd := exec.Command("wget", url, "-O", path)
+	if err := wgetCmd.Run(); err != nil {
+		return err
 	}
+
+	// Execute the second command: viu
+	viuCmd := exec.Command("viu", "-w", "30", "-h", "10", path)
+	viuOutput, err := viuCmd.Output()
+	if err != nil {
+		return err
+	}
+	if current.album != string(viuOutput) {
+		current.album = string(viuOutput)
+	}
+
 	return nil
 }
 
-func getAlbumCover(playing Current) string {
+func getAlbumCover() error {
 	res, err := http.Get(baseURL + "devices/currently_playing")
 	if err != nil {
-		return err.Error()
+		return err
 	}
 	var results models.Currently_playing
 	byteres, err := io.ReadAll(res.Body)
 	if err != nil {
-		return err.Error()
+		return err
 	}
 	err = json.Unmarshal(byteres, &results)
 	if err != nil {
-		return err.Error()
+		return err
 	}
 	if results.CurrentlyPlayingType != "episode" {
 		url := &results.Item.Album.Images[0].URL
-		image := saveCover(*url, results.Item.ID, playing)
-		return <-image
-	}
-	return ""
-}
-func renderAlbumCover(path string, playing Current) string {
-	if playing.track != current.track {
-		viuCmd := exec.Command("viu", "-w", "30", "-h", "10", path)
-		viuOutput, err := viuCmd.Output()
-		if err != nil {
-			return ""
+		if current.albumURL != *url {
+			current.albumURL = *url
+			err := saveCover(*url, results.Item.ID)
+			fmt.Println(current.album)
+			if err != nil {
+				return err
+			}
 		}
-		return string(viuOutput)
 	}
-	return ""
+	return nil
 }
 
-func getCurrentlyPlaying() string {
+func getCurrentlyPlaying() error {
 	res, err := http.Get(baseURL + "devices/currently_playing")
 	if err != nil {
-		return err.Error()
+		return err
 	}
 
-	return getTitleAndArtist(res)
+	err = getTitleAndArtist(res)
+	if err != nil {
+		return err
+	}
+	return nil
 }
 func getVolume() string {
 	res, err := http.Get(baseURL + "devices/")
@@ -109,11 +103,11 @@ func getVolume() string {
 	}
 	return fmt.Sprint(device.Device.VolumePercent)
 }
-func renderVolume() string {
+func renderVolume() error {
 	volstr := getVolume()
 	vol, err := strconv.Atoi(volstr)
 	if err != nil {
-		return err.Error()
+		return err
 	}
 	currentBlock := vol / 10
 	emptyblocks := 10 - vol
@@ -125,36 +119,43 @@ func renderVolume() string {
 		s.WriteString("-")
 	}
 	volout := "vol:" + s.String() + " " + fmt.Sprint(vol) + "%"
-	return volout
+	if current.vol != volout {
+		current.vol = volout
+		return nil
+	}
+	return nil
 }
 
-func getTitleAndArtist(res *http.Response) string {
-	if playing.track != current.track {
+func getTitleAndArtist(res *http.Response) error {
+	var results models.Currently_playing
+	byteres, err := io.ReadAll(res.Body)
 
-		var results models.Currently_playing
-		byteres, err := io.ReadAll(res.Body)
-
-		if err != nil {
-			return err.Error()
-		}
-		err = json.Unmarshal(byteres, &results)
-		if err != nil {
-			return err.Error()
-		}
-		if results.Item.Type == "track" {
-			track := results.Item.Name
-			artist := results.Item.Artists[0].Name
-			current.track = fmt.Sprintf("%s - %s", track, artist)
-			return current.track
-
-		}
-		if results.CurrentlyPlayingType == "episode" {
-			track := results.Item.Name
-			return track
-		}
-		return "not a song"
+	if err != nil {
+		return err
 	}
-	return current.track
+	err = json.Unmarshal(byteres, &results)
+	if err != nil {
+		return err
+	}
+	if results.Item.Type == "track" {
+		track := results.Item.Name
+		artist := results.Item.Artists[0].Name
+		trackString := fmt.Sprintf("%s - %s", track, artist)
+		if trackString != current.track {
+			current.track = trackString
+			return nil
+		}
+		return nil
+
+	}
+	if results.CurrentlyPlayingType == "episode" {
+		track := results.Item.Name
+		if current.track != track {
+			current.track = track
+			return nil
+		}
+	}
+	return nil
 }
 
 var (
@@ -177,7 +178,10 @@ type dialog struct {
 func playerFunc(action string) bool {
 	res, err := http.Get(baseURL + "devices/player/" + action)
 	if err != nil {
-		getCurrentlyPlaying()
+		err := getCurrentlyPlaying()
+		if err != nil {
+			return false
+		}
 		log.Error().Msg("oops")
 	}
 	if res.StatusCode == 200 {
@@ -217,11 +221,15 @@ func (m dialog) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 func (m dialog) View() string {
 
 	question := lipgloss.NewStyle().Width(m.width).Align(lipgloss.Center).Render("gootify")
-	playing.track = getCurrentlyPlaying()
-	volLabel := lipgloss.NewStyle().Width(m.width).Align(lipgloss.Center).Render(renderVolume())
+
+	_ = getCurrentlyPlaying()
+	_ = renderVolume()
+	_ = getAlbumCover()
+
+	volLabel := lipgloss.NewStyle().Width(m.width).Align(lipgloss.Center).Render(current.vol)
 	volumeControls := lipgloss.JoinHorizontal(lipgloss.Bottom, volLabel)
 	currentTrack := lipgloss.NewStyle().Width(m.width).Align(lipgloss.Center).Render(current.track)
-	//albumArt := lipgloss.NewStyle().Width(m.width).Align(lipgloss.Center).Render(renderAlbumCover("./alb.jpg", playing))
-	//fmt.Println(renderAlbumCover("./alb.jpg", playing))
-	return dialogBoxStyle.Render(lipgloss.JoinVertical(lipgloss.Center, question, currentTrack, volumeControls))
+	albumArt := lipgloss.NewStyle().Width(m.width).Align(lipgloss.Center).Render(current.album)
+
+	return dialogBoxStyle.Render(lipgloss.JoinVertical(lipgloss.Center, question, currentTrack, albumArt, volumeControls))
 }

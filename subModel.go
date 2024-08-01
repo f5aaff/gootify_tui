@@ -51,9 +51,7 @@ func (m mainModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 func (m mainModel) View() string {
 	doc := strings.Builder{}
 
-	var renderedTabs []string
-
-	for i, t := range m.Tabs {
+	for i := range m.Tabs {
 		var style lipgloss.Style
 		isFirst, isLast, isActive := i == 0, i == len(m.Tabs)-1, i == m.activeTab
 		if isActive {
@@ -71,13 +69,8 @@ func (m mainModel) View() string {
 		} else if isLast && !isActive {
 			border.BottomRight = "┤"
 		}
-		style = style.Border(border)
-		renderedTabs = append(renderedTabs, style.Render(t))
 	}
 
-//row := lipgloss.JoinHorizontal(lipgloss.Top)
-//	doc.WriteString(row)
-	doc.WriteString("\n")
 	tab := m.TabContent[m.activeTab]
 	doc.WriteString(windowStyle.Width((lipgloss.Width(tab.View()) + windowStyle.GetHorizontalFrameSize())).Render(m.TabContent[m.activeTab].View()))
 	return docStyle.Render(doc.String())

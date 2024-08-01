@@ -17,9 +17,6 @@ var (
 	highlight = lipgloss.AdaptiveColor{Light: "#874BFD", Dark: "#7D56F4"}
 )
 
-// TODO : figure out a structure to have generic submodels, then have tabcontent be a slice of those submodels
-// then find a way to render these sub models when they are the active tab.
-
 func tabBorderWithBottom(left, middle, right, top string) lipgloss.Border {
 	border := lipgloss.RoundedBorder()
 	border.BottomLeft = left
@@ -30,20 +27,24 @@ func tabBorderWithBottom(left, middle, right, top string) lipgloss.Border {
 }
 
 var (
-	inactiveTabBorder = tabBorderWithBottom("┴", "─", "┴","─")
-	activeTabBorder   = tabBorderWithBottom("┘", "_", "└","─")
+	inactiveTabBorder = tabBorderWithBottom("┴", "─", "┴", "─")
+	activeTabBorder   = tabBorderWithBottom("┘", "_", "└", "─")
 	docStyle          = lipgloss.NewStyle().Padding(1, 1, 1, 1)
 	highlightColor    = lipgloss.AdaptiveColor{Light: "#874BFD", Dark: "#7D56F4"}
 	inactiveTabStyle  = lipgloss.NewStyle().Border(inactiveTabBorder, true).BorderForeground(highlightColor).Padding(0, 1)
 	activeTabStyle    = inactiveTabStyle.Border(activeTabBorder, true)
-	windowStyle       = lipgloss.NewStyle().BorderForeground(highlightColor).Padding(0, 0).Align(lipgloss.Center).Border(lipgloss.RoundedBorder()))
+	windowStyle       = lipgloss.NewStyle().BorderForeground(highlightColor).Padding(0, 0).Align(lipgloss.Center).Border(lipgloss.RoundedBorder())
+)
 
 func main() {
 	zone.NewGlobal()
-	tabs := []string{"Dialog", "History"}
+	tabs := []string{"Dialog", "Help"}
 	d := dialog{width: 20, height: 20}
-	h := history{items: []string{"one", "two", "three"}}
-	h.width = d.width
+	//hi := history{items: []string{"one", "two", "three"}}
+    playerHelp := []string{"ctrl+c/q : quit", "d : next", "l/a : previous", "s : pause", "shift+s : play"}
+    helpHelp := []string{"help","+ : next help page", "- : previous help page"}
+	h := help{Pages: [][]string{playerHelp,helpHelp}}
+    h.width = d.width
 	h.height = d.height
 	tabContent := []subModel{d, h}
 	m := mainModel{Tabs: tabs, TabContent: tabContent}
