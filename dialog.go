@@ -90,17 +90,28 @@ func getVolume() string {
         return err.Error()
     }
 
+    type response struct {
+        ID               string `json:"id"`
+        IsActive         bool   `json:"is_active"`
+        IsPrivateSession bool   `json:"is_private_session"`
+        IsRestricted     bool   `json:"is_restricted"`
+        Name             string `json:"name"`
+        SupportsVolume   bool   `json:"supports_volume"`
+        Type             string `json:"type"`
+        VolumePercent    int    `json:"volume_percent"`
+    }
+
     byteres, err := io.ReadAll(res.Body)
     if err != nil {
         return err.Error()
     }
 
-    var device models.DeviceResponse
+    var device response
     err = json.Unmarshal(byteres, &device)
     if err != nil {
         return err.Error()
     }
-    return fmt.Sprint(device.Device.VolumePercent)
+    return fmt.Sprint(device.VolumePercent)
 }
 func renderVolume() error {
     volstr := getVolume()
@@ -211,7 +222,10 @@ func (m dialog) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
             playerFunc("pause")
         case "S":
             playerFunc("play")
+        case "+"
+            playerFunc()
         }
+
     }
     return m, nil
 
@@ -227,14 +241,14 @@ func (m dialog) View() string {
 
     volLabel := lipgloss.NewStyle().Width(m.width).Align(lipgloss.Center).Render(current.vol)
     volumeControls := lipgloss.JoinHorizontal(lipgloss.Bottom, volLabel)
-    track := strings.Split(current.track," - ")[0]
-    artist := strings.Split(current.track," - ")[1]
-    currentTrack := lipgloss.NewStyle().Width(m.width).Margin(0,10).Align(lipgloss.Center).Render(track)
-    currentArtist := lipgloss.NewStyle().Width(m.width).Margin(0,10).Align(lipgloss.Center).Render(artist)
+    track := strings.Split(current.track, " - ")[0]
+    artist := strings.Split(current.track, " - ")[1]
+    currentTrack := lipgloss.NewStyle().Width(m.width).Margin(0, 10).Align(lipgloss.Center).Render(track)
+    currentArtist := lipgloss.NewStyle().Width(m.width).Margin(0, 10).Align(lipgloss.Center).Render(artist)
 
-    currentString := lipgloss.JoinVertical(0.1,currentTrack,currentArtist)
+    currentString := lipgloss.JoinVertical(0.1, currentTrack, currentArtist)
     //currentTrack := lipgloss.NewStyle().Width(m.width).Margin(0,10).Align(lipgloss.Center).Render(current.track)
-    albumArt := lipgloss.NewStyle().Width(m.width).Margin(0,10).Align(lipgloss.Center).Render(current.album)
-    album := lipgloss.JoinVertical(0.3,currentString,albumArt)
+    albumArt := lipgloss.NewStyle().Width(m.width).Margin(0, 10).Align(lipgloss.Center).Render(current.album)
+    album := lipgloss.JoinVertical(0.3, currentString, albumArt)
     return dialogBoxStyle.Render(lipgloss.JoinVertical(lipgloss.Center, question, album, volumeControls))
 }
