@@ -219,7 +219,7 @@ func (m dialog) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 func (m dialog) View() string {
 
-    question := lipgloss.NewStyle().Width(m.width).Align(lipgloss.Center).Render("gootify")
+    question := lipgloss.NewStyle().Width(m.width).Margin(1).Align(lipgloss.Center).Render("gootify")
 
     _ = getCurrentlyPlaying()
     _ = renderVolume()
@@ -227,8 +227,14 @@ func (m dialog) View() string {
 
     volLabel := lipgloss.NewStyle().Width(m.width).Align(lipgloss.Center).Render(current.vol)
     volumeControls := lipgloss.JoinHorizontal(lipgloss.Bottom, volLabel)
-    currentTrack := lipgloss.NewStyle().Width(m.width).Align(lipgloss.Center).Render(current.track)
-    albumArt := lipgloss.NewStyle().Width(m.width).Align(lipgloss.Center).Render(current.album)
+    track := strings.Split(current.track," - ")[0]
+    artist := strings.Split(current.track," - ")[1]
+    currentTrack := lipgloss.NewStyle().Width(m.width).Margin(0,10).Align(lipgloss.Center).Render(track)
+    currentArtist := lipgloss.NewStyle().Width(m.width).Margin(0,10).Align(lipgloss.Center).Render(artist)
 
-    return dialogBoxStyle.Render(lipgloss.JoinVertical(lipgloss.Center, question, currentTrack, albumArt, volumeControls))
+    currentString := lipgloss.JoinVertical(0.1,currentTrack,currentArtist)
+    //currentTrack := lipgloss.NewStyle().Width(m.width).Margin(0,10).Align(lipgloss.Center).Render(current.track)
+    albumArt := lipgloss.NewStyle().Width(m.width).Margin(0,10).Align(lipgloss.Center).Render(current.album)
+    album := lipgloss.JoinVertical(0.3,currentString,albumArt)
+    return dialogBoxStyle.Render(lipgloss.JoinVertical(lipgloss.Center, question, album, volumeControls))
 }
