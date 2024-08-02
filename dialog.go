@@ -2,7 +2,7 @@ package main
 
 import (
     "encoding/json"
-    "example/models"
+    "gootifyTui/models"
     "fmt"
     tea "github.com/charmbracelet/bubbletea"
     "github.com/charmbracelet/lipgloss"
@@ -222,8 +222,11 @@ func (m dialog) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
             playerFunc("pause")
         case "S":
             playerFunc("play")
-        case "+"
-            playerFunc()
+        case "+":
+            _,_ = http.Get(baseURL + "devices/volup")
+
+        case "-":
+            _,_ = http.Get(baseURL + "devices/voldown")
         }
 
     }
