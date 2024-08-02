@@ -25,7 +25,7 @@ type Current struct {
 
 var current = Current{track: "", progress: "", vol: "", albumURL: "", album: ""}
 
-func updateInterval() {
+func UpdateInterval() {
     for range time.Tick(time.Second * 5) {
         _ = getCurrentlyPlaying()
         _ = renderVolume()
@@ -250,7 +250,6 @@ func (m dialog) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 func (m dialog) View() string {
 
     question := lipgloss.NewStyle().Width(m.width).Margin(1).Align(lipgloss.Center).Render("gootify")
-    go updateInterval()
     //_ = getCurrentlyPlaying()
     //_ = renderVolume()
     //_ = getAlbumCover()
