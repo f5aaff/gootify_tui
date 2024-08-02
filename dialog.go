@@ -2,16 +2,17 @@ package main
 
 import (
     "encoding/json"
-    "gootifyTui/models"
     "fmt"
     tea "github.com/charmbracelet/bubbletea"
     "github.com/charmbracelet/lipgloss"
     "github.com/rs/zerolog/log"
+    "gootifyTui/models"
     "io"
     "net/http"
     "os/exec"
     "strconv"
     "strings"
+    "time"
 )
 
 type Current struct {
@@ -23,6 +24,15 @@ type Current struct {
 }
 
 var current = Current{track: "", progress: "", vol: "", albumURL: "", album: ""}
+
+func updateInterval() {
+    for range time.Tick(time.Second * 5) {
+        _ = getCurrentlyPlaying()
+        _ = renderVolume()
+        _ = getAlbumCover()
+
+    }
+}
 
 func saveCover(url string, id string) error {
     // Execute the first command: wget
@@ -223,10 +233,10 @@ func (m dialog) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
         case "S":
             playerFunc("play")
         case "+":
-            _,_ = http.Get(baseURL + "devices/volup")
+            _, _ = http.Get(baseURL + "devices/volup")
 
         case "-":
-            _,_ = http.Get(baseURL + "devices/voldown")
+            _, _ = http.Get(baseURL + "devices/voldown")
         }
 
     }
@@ -237,20 +247,25 @@ func (m dialog) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 func (m dialog) View() string {
 
     question := lipgloss.NewStyle().Width(m.width).Margin(1).Align(lipgloss.Center).Render("gootify")
-
-    _ = getCurrentlyPlaying()
-    _ = renderVolume()
-    _ = getAlbumCover()
+    go updateInterval()
+    //_ = getCurrentlyPlaying()
+    //_ = renderVolume()
+    //_ = getAlbumCover()
 
     volLabel := lipgloss.NewStyle().Width(m.width).Align(lipgloss.Center).Render(current.vol)
     volumeControls := lipgloss.JoinHorizontal(lipgloss.Bottom, volLabel)
-    track := strings.Split(current.track, " - ")[0]
-    artist := strings.Split(current.track, " - ")[1]
+
+    track, artist := "", ""
+
+    if current.track != "" {
+        track = strings.Split(current.track, " - ")[0]
+        artist = strings.Split(current.track, " - ")[1]
+    }
+
     currentTrack := lipgloss.NewStyle().Width(m.width).Margin(0, 10).Align(lipgloss.Center).Render(track)
     currentArtist := lipgloss.NewStyle().Width(m.width).Margin(0, 10).Align(lipgloss.Center).Render(artist)
 
     currentString := lipgloss.JoinVertical(0.1, currentTrack, currentArtist)
-    //currentTrack := lipgloss.NewStyle().Width(m.width).Margin(0,10).Align(lipgloss.Center).Render(current.track)
     albumArt := lipgloss.NewStyle().Width(m.width).Margin(0, 10).Align(lipgloss.Center).Render(current.album)
     album := lipgloss.JoinVertical(0.3, currentString, albumArt)
     return dialogBoxStyle.Render(lipgloss.JoinVertical(lipgloss.Center, question, album, volumeControls))

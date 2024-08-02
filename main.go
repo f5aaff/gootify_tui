@@ -40,10 +40,11 @@ func main() {
     zone.NewGlobal()
     tabs := []string{"Dialog", "Help"}
     d := dialog{width: 20, height: 20}
-    //hi := history{items: []string{"one", "two", "three"}}
-    playerHelp := []string{"ctrl+c/q : quit", "d : next", "l/a : previous", "s : pause", "shift+s : play"}
+    playerHelp := []string{"ctrl+c/q : quit", "d : next", "l/a : previous", "s : pause", "shift+s : play","+ : volume up", "- : volume down"}
     helpHelp := []string{"help", "+ : next help page", "- : previous help page"}
-    h := help{Pages: [][]string{playerHelp, helpHelp}}
+    h := help{}
+    h.Pages = append(h.Pages,playerHelp)
+    h.Pages = append(h.Pages,helpHelp)
     h.width = d.width
     h.height = d.height
     tabContent := []subModel{d, h}
