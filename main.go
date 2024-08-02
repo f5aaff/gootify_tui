@@ -1,11 +1,12 @@
 package main
 
 import (
-    "fmt"
-    tea "github.com/charmbracelet/bubbletea"
-    "github.com/charmbracelet/lipgloss"
-    zone "github.com/lrstanley/bubblezone"
-    "os"
+	"fmt"
+	"os"
+
+	tea "github.com/charmbracelet/bubbletea"
+	"github.com/charmbracelet/lipgloss"
+	zone "github.com/lrstanley/bubblezone"
 )
 
 const (

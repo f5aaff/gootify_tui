@@ -70,12 +70,15 @@ func getAlbumCover() error {
         return err
     }
     if results.CurrentlyPlayingType != "episode" {
-        url := &results.Item.Album.Images[0].URL
-        if current.albumURL != *url {
-            current.albumURL = *url
-            err := saveCover(*url, results.Item.ID)
-            if err != nil {
-                return err
+        if len(results.Item.Album.Images) > 0 {
+            url := &results.Item.Album.Images[0].URL
+            if current.albumURL != *url {
+                current.albumURL = *url
+                err := saveCover(*url, results.Item.ID)
+                if err != nil {
+                    return err
+                }
+
             }
         }
     }
