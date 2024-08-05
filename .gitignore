@@ -4,3 +4,4 @@ libExamples/
 *libExamples*
 *.jpg
 albumArt/*
+*.json

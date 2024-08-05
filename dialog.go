@@ -82,6 +82,26 @@ func getAlbumCover() error {
             }
         }
     }
+    if results.CurrentlyPlayingType == "episode" {
+        res,err := http.Get(baseURL + "devices/queue")
+        if err != nil {
+            return err
+        }
+        episode,err := getNameAndShow(res)
+        if err != nil{
+            return err
+        }
+        if len(episode.CurrentlyPlaying.Images) >0 {
+        url := &episode.CurrentlyPlaying.Images[0].URL
+        if current.albumURL != *url {
+                current.albumURL = *url
+                err := saveCover(*url, episode.CurrentlyPlaying.ID)
+                if err != nil {
+                    return err
+                }
+            }
+        }
+    }
     return nil
 }
 
@@ -97,6 +117,7 @@ func getCurrentlyPlaying() error {
     }
     return nil
 }
+
 func getVolume() string {
     res, err := http.Get(baseURL + "devices/")
     if err != nil {
@@ -172,7 +193,12 @@ func getTitleAndArtist(res *http.Response) error {
 
     }
     if results.CurrentlyPlayingType == "episode" {
-        track := results.Item.Name
+     res, err := http.Get(baseURL + "devices/queue")
+     results,err := getNameAndShow(res)
+    if err != nil {
+        return err
+    }
+    track := results.CurrentlyPlaying.Name+" - "+results.CurrentlyPlaying.Show.Name
         if current.track != track {
             current.track = track
             return nil
@@ -181,6 +207,19 @@ func getTitleAndArtist(res *http.Response) error {
     return nil
 }
 
+func getNameAndShow(res *http.Response) (*models.Episode,error){
+    var results models.Episode
+    byteres,err := io.ReadAll(res.Body)
+    if err != nil{
+        return nil,err
+    }
+    err = json.Unmarshal(byteres, &results)
+    if err != nil{
+        return nil,err
+    }
+    return &results,nil
+
+}
 var (
     dialogBoxStyle = lipgloss.NewStyle().
         BorderForeground(highlightColor).
