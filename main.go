@@ -38,8 +38,7 @@ var (
 )
 
 func main() {
-
-    go UpdateInterval()
+    go UpdateInterval(true)
 
     zone.NewGlobal()
     tabs := []string{"Dialog", "Help"}

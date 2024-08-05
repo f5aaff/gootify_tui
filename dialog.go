@@ -16,20 +16,29 @@ import (
 )
 
 type Current struct {
-	track       string
-	progress    string
-	vol         string
-	albumURL    string
-	album       string
-	currentType string
-	itemID      string
+	track          string
+	progress       int
+	duration       int
+	progressString string
+	vol            string
+	albumURL       string
+	album          string
+	currentType    string
+	itemID         string
 }
 
-var current = Current{track: "", progress: "", vol: "", albumURL: "", album: "", currentType: "", itemID: ""}
+var current = Current{track: "", progress: 0, duration: 0, progressString: "", vol: "", albumURL: "", album: "", currentType: "", itemID: ""}
 
-func UpdateInterval() {
+func UpdateInterval(now bool) {
+	if now {
+		_ = getCurrentlyPlaying()
+		renderProgress()
+		_ = renderVolume()
+		_ = getAlbumCover()
+	}
 	for range time.Tick(time.Second * 5) {
 		_ = getCurrentlyPlaying()
+		renderProgress()
 		_ = renderVolume()
 		_ = getAlbumCover()
 
@@ -44,7 +53,7 @@ func saveCover(url string, id string) error {
 		return err
 	}
 	// Execute the second command: viu
-	viuCmd := exec.Command("viu","-b", "-w", "20", "-h", "10", path)
+	viuCmd := exec.Command("viu", "-b", "-w", "20", "-h", "10", path)
 	viuOutput, err := viuCmd.Output()
 	if err != nil {
 		return err
@@ -58,7 +67,7 @@ func saveCover(url string, id string) error {
 
 func getAlbumCover() error {
 	if current.itemID != "" && current.albumURL != "" {
-        err := saveCover(current.albumURL, current.itemID)
+		err := saveCover(current.albumURL, current.itemID)
 		if err != nil {
 			return err
 		}
@@ -124,14 +133,53 @@ func renderVolume() error {
 	for range emptyblocks {
 		s.WriteString("-")
 	}
-	volout := "vol:" + s.String() + " " + fmt.Sprint(vol) + "%"
+	volout := "vol: " + s.String() + " " + fmt.Sprint(vol) + "%"
 	if current.vol != volout {
 		current.vol = volout
 		return nil
 	}
 	return nil
 }
+func renderProgress() {
 
+	prog := current.progress
+
+	dur := current.duration
+	perc := 0
+	if dur > 0 {
+		progf := float64(current.progress)
+		durf := float64(current.duration)
+		perc = int((progf / durf) * 100)
+	}
+	currentBlock := (100 - perc) / 10
+	emptyblocks := 10 - currentBlock
+	var s strings.Builder
+	for range currentBlock {
+		s.WriteString("█")
+	}
+	for range emptyblocks {
+		s.WriteString("-")
+	}
+	minSec := func(ms int) string {
+		if ms != 0 {
+			minutes := int((ms / 1000) / 60)
+			remainingSeconds := int((ms / 1000) % 60)
+			remstr, minstr := fmt.Sprint(remainingSeconds), fmt.Sprint(minutes)
+			if minutes < 10 {
+				minstr = "0" + fmt.Sprint(minutes)
+			}
+			if remainingSeconds < 10 {
+				remstr = "0" + fmt.Sprint(remainingSeconds)
+			}
+			return minstr + ":" + remstr
+		}
+		return "00:00"
+	}
+
+	progString := minSec(prog)
+	durString := minSec(dur)
+	current.progressString = progString + s.String() + durString
+}
 func getTitleAndArtist(res *http.Response) error {
 	byteres, err := io.ReadAll(res.Body)
 	if err != nil {
@@ -147,7 +195,13 @@ func getTitleAndArtist(res *http.Response) error {
 	if !ok {
 		return nil
 	}
+	progress, ok := resultMap["progress_ms"]
+	if !ok {
+		progress = "0"
+	}
 
+	//this is gross, I hate it but it works
+	current.progress = int(progress.(float64))
 	if currentType.(string) == "track" {
 		current.currentType = "track"
 		var results models.Currently_playing
@@ -155,12 +209,15 @@ func getTitleAndArtist(res *http.Response) error {
 		if err != nil {
 			return err
 		}
+		current.duration = results.Item.DurationMs
+
 		track := results.Item.Name
 		artist := results.Item.Artists[0].Name
 		trackString := fmt.Sprintf("%s - %s", track, artist)
+
 		if trackString != current.track {
 			current.track = trackString
-            current.itemID = results.Item.ID
+			current.itemID = results.Item.ID
 			if len(results.Item.Album.Images) > 0 {
 				current.albumURL = results.Item.Album.Images[0].URL
 			}
@@ -169,13 +226,13 @@ func getTitleAndArtist(res *http.Response) error {
 		return nil
 
 	}
+
 	if currentType.(string) == "episode" {
 		current.currentType = "episode"
 		res, err := http.Get(baseURL + "devices/queue")
 		if err != nil {
 			return err
 		}
-
 		byteres, err := io.ReadAll(res.Body)
 		if err != nil {
 			return err
@@ -186,11 +243,11 @@ func getTitleAndArtist(res *http.Response) error {
 		if err != nil {
 			return err
 		}
-
+		current.duration = results.CurrentlyPlaying.DurationMs
 		track := results.CurrentlyPlaying.Name + " - " + results.CurrentlyPlaying.Show.Name
 		if current.track != track {
 			current.track = track
-            current.itemID = results.CurrentlyPlaying.ID
+			current.itemID = results.CurrentlyPlaying.ID
 			if len(results.CurrentlyPlaying.Images) > 0 {
 				current.albumURL = results.CurrentlyPlaying.Images[0].URL
 			}
@@ -280,11 +337,13 @@ func (m dialog) View() string {
 		artist = strings.Split(current.track, " - ")[1]
 	}
 
+	progress := current.progressString
+
 	currentTrack := lipgloss.NewStyle().Width(m.width).Margin(0, 10).Align(lipgloss.Center).Render(track)
 	currentArtist := lipgloss.NewStyle().Width(m.width).Margin(0, 10).Align(lipgloss.Center).Render(artist)
-
+	currentProgress := lipgloss.NewStyle().Width(m.width).Margin(0,10,1).Align(lipgloss.Center).Render(progress)
 	currentString := lipgloss.JoinVertical(0.1, currentTrack, currentArtist)
 	albumArt := lipgloss.NewStyle().Width(m.width).Margin(0, 10).Align(lipgloss.Center).Render(current.album)
-	album := lipgloss.JoinVertical(0.3, currentString, albumArt)
+	album := lipgloss.JoinVertical(1, currentString, albumArt, currentProgress)
 	return dialogBoxStyle.Render(lipgloss.JoinVertical(lipgloss.Center, question, album, volumeControls))
 }
