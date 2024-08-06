@@ -45,9 +45,11 @@ func main() {
     d := dialog{width: 20, height: 20}
     playerHelp := []string{"ctrl+c/q : quit", "d : next", "l/a : previous", "s : pause", "shift+s : play","+ : volume up", "- : volume down"}
     helpHelp := []string{"help", "+ : next help page", "- : previous help page"}
+    otherHelp := []string{"this","is","a","test"}
     h := help{}
     h.Pages = append(h.Pages,playerHelp)
     h.Pages = append(h.Pages,helpHelp)
+    h.Pages = append(h.Pages,otherHelp)
     h.width = d.width
     h.height = d.height
     tabContent := []subModel{d, h}
