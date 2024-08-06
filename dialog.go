@@ -154,10 +154,10 @@ func renderProgress() {
 	currentBlock := (100 - perc) / 10
 	emptyblocks := 10 - currentBlock
 	var s strings.Builder
-	for range currentBlock {
+	for range currentBlock-1 {
 		s.WriteString("█")
 	}
-	for range emptyblocks {
+	for range emptyblocks-1 {
 		s.WriteString("-")
 	}
 	minSec := func(ms int) string {

@@ -1,12 +1,12 @@
 package main
 
 import (
-	"fmt"
-	"os"
+    "fmt"
+    "os"
 
-	tea "github.com/charmbracelet/bubbletea"
-	"github.com/charmbracelet/lipgloss"
-	zone "github.com/lrstanley/bubblezone"
+    tea "github.com/charmbracelet/bubbletea"
+    "github.com/charmbracelet/lipgloss"
+    zone "github.com/lrstanley/bubblezone"
 )
 
 const (
@@ -43,15 +43,13 @@ func main() {
     zone.NewGlobal()
     tabs := []string{"Dialog", "Help"}
     d := dialog{width: 20, height: 20}
-    playerHelp := []string{"ctrl+c/q : quit", "d : next", "l/a : previous", "s : pause", "shift+s : play","+ : volume up", "- : volume down"}
-    helpHelp := []string{"help", "+ : next help page", "- : previous help page"}
-    otherHelp := []string{"this","is","a","test"}
+    playerHelp := []string{"Player","ctrl+c/q : quit", "d : next", "l/a : previous", "s : pause", "shift+s : play", "+ : volume up", "- : volume down"}
+    helpHelp := []string{"Help", "] : next help page", "[ : previous help page"}
     h := help{}
-    h.Pages = append(h.Pages,playerHelp)
-    h.Pages = append(h.Pages,helpHelp)
-    h.Pages = append(h.Pages,otherHelp)
-    h.width = d.width
-    h.height = d.height
+    h.Pages = append(h.Pages, playerHelp)
+    h.Pages = append(h.Pages, helpHelp)
+    h.width = 20
+    h.height = 25
     tabContent := []subModel{d, h}
     m := mainModel{Tabs: tabs, TabContent: tabContent}
     if _, err := tea.NewProgram(m).Run(); err != nil {
